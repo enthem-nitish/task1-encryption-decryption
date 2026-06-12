@@ -25,7 +25,7 @@
 
 <!-- Replace this with your actual screenshot -->
 <div align="center">
-<img src="screenshot.png" alt="Caesar Cipher Tool UI" width="90%" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);"/>
+<img src="Screenshot.png" alt="Caesar Cipher Tool UI" width="90%" style="border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);"/>
 </div>
 
 > 📌 *To add your screenshot: take a screenshot of `localhost:5000`, save it as `screenshot.png` in the project root.*
