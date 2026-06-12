@@ -1,736 +1,1039 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Caesar Cipher — Encrypt & Decrypt</title>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Caesar Cipher — Encrypt & Decrypt</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet"/>
+<style>
+/* ══════════════════════════════════════════════
+   RESET & TOKENS
+══════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --void:#04050d;
+  --deep:#080b18;
+  --surface:rgba(255,255,255,0.04);
+  --surface2:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.07);
+  --border2:rgba(255,255,255,0.13);
+  --violet:#7c5cfc;
+  --vsoft:#a78bfa;
+  --rose:#fc5c7d;
+  --cyan:#22d3ee;
+  --gold:#fbbf24;
+  --green:#4ade80;
+  --text:#eef0f6;
+  --muted:#64748b;
+  --dim:#2d3748;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--void);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  overflow-x:hidden;
+  line-height:1.6;
+}
 
-    :root {
-      --bg: #07080f;
-      --surface: rgba(255,255,255,0.04);
-      --border: rgba(255,255,255,0.08);
-      --accent: #7c5cfc;
-      --accent2: #fc5c7d;
-      --gold: #f5c842;
-      --text: #e8eaf0;
-      --muted: #6b7280;
-      --glow: rgba(124,92,252,0.35);
-    }
+/* ══ CANVAS BG ══ */
+#cvs{position:fixed;inset:0;z-index:0;pointer-events:none}
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Space Grotesk', sans-serif;
-      overflow-x: hidden;
-    }
+/* ══ NOISE ══ */
+body::before{
+  content:'';position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  opacity:.5;
+}
 
-    /* ── 3D Canvas Background ── */
-    #bg-canvas {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-    }
+/* ══ WRAP ══ */
+.page{position:relative;z-index:2}
 
-    /* ── Floating orbs ── */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: 0.18;
-      pointer-events: none;
-      animation: floatOrb 12s ease-in-out infinite;
-    }
-    .orb1 { width: 500px; height: 500px; background: var(--accent); top: -100px; left: -100px; animation-delay: 0s; }
-    .orb2 { width: 400px; height: 400px; background: var(--accent2); bottom: -80px; right: -80px; animation-delay: -5s; }
-    .orb3 { width: 300px; height: 300px; background: #5cc8fc; top: 40%; left: 50%; animation-delay: -9s; }
+/* ══════════════════════════════════════════════
+   NAV
+══════════════════════════════════════════════ */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 40px;
+  background:rgba(4,5,13,0.7);
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+}
+.nav-brand{
+  display:flex;align-items:center;gap:10px;
+  font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;
+  background:linear-gradient(135deg,#fff,var(--vsoft));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-decoration:none;
+}
+.nav-brand .lock-ico{
+  width:32px;height:32px;border-radius:9px;
+  background:linear-gradient(135deg,var(--violet),var(--rose));
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+  box-shadow:0 4px 16px rgba(124,92,252,0.4);
+}
+.nav-links{display:flex;align-items:center;gap:6px}
+.nav-link{
+  padding:7px 16px;border-radius:10px;font-size:.82rem;font-weight:600;
+  color:var(--muted);text-decoration:none;
+  border:1px solid transparent;
+  transition:all .2s;cursor:pointer;background:none;font-family:inherit;
+}
+.nav-link:hover{color:var(--text);background:var(--surface2);border-color:var(--border2)}
+.nav-cta{
+  padding:8px 18px;border-radius:10px;
+  background:linear-gradient(135deg,var(--violet),var(--rose));
+  color:#fff;font-size:.82rem;font-weight:700;
+  border:none;cursor:pointer;font-family:inherit;
+  box-shadow:0 4px 16px rgba(124,92,252,0.35);
+  transition:transform .2s,box-shadow .2s;
+}
+.nav-cta:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,92,252,0.5)}
 
-    @keyframes floatOrb {
-      0%, 100% { transform: translate(0,0) scale(1); }
-      33% { transform: translate(30px, -40px) scale(1.05); }
-      66% { transform: translate(-20px, 20px) scale(0.95); }
-    }
+/* ══════════════════════════════════════════════
+   HERO
+══════════════════════════════════════════════ */
+.hero{
+  min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;padding:100px 24px 60px;
+  position:relative;overflow:hidden;
+}
+.ring{
+  position:absolute;border-radius:50%;
+  border:1px solid rgba(124,92,252,0.1);
+  pointer-events:none;animation:spin linear infinite;
+}
+.ring::after{
+  content:'';position:absolute;top:-4px;left:50%;
+  transform:translateX(-50%);
+  width:8px;height:8px;border-radius:50%;
+  background:var(--violet);
+  box-shadow:0 0 16px 4px rgba(124,92,252,0.6);
+}
+.r1{width:560px;height:560px;animation-duration:28s}
+.r2{width:760px;height:760px;border-color:rgba(252,92,125,0.06);animation-duration:45s;animation-direction:reverse}
+.r2::after{background:var(--rose);box-shadow:0 0 16px 4px rgba(252,92,125,0.5)}
+.r3{width:960px;height:960px;border-color:rgba(34,211,238,0.04);animation-duration:60s}
+.r3::after{background:var(--cyan);box-shadow:0 0 16px 4px rgba(34,211,238,0.4)}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-    /* ── Layout ── */
-    .app {
-      position: relative;
-      z-index: 1;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 40px 20px 80px;
-    }
+.badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(124,92,252,0.1);border:1px solid rgba(124,92,252,0.25);
+  border-radius:100px;padding:6px 18px;
+  font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--vsoft);margin-bottom:28px;
+  animation:fadeDown .7s ease both;
+}
+.badge .dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--green);box-shadow:0 0 8px var(--green);
+  animation:blink 2s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-    /* ── Header ── */
-    header {
-      text-align: center;
-      margin-bottom: 48px;
-      animation: fadeDown 0.8s ease both;
-    }
+h1{
+  font-family:'Syne',sans-serif;font-weight:800;
+  font-size:clamp(2.8rem,7vw,6rem);
+  letter-spacing:-.04em;line-height:1;
+  margin-bottom:6px;
+  animation:fadeDown .8s .1s ease both;
+}
+h1 .g1{
+  display:block;
+  background:linear-gradient(135deg,#fff 0%,var(--vsoft) 45%,var(--rose) 100%);
+  background-size:200% 200%;
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:gshift 5s ease-in-out infinite;
+}
+h1 .g2{
+  display:block;font-size:.5em;
+  color:rgba(255,255,255,0.1);
+  background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.12),rgba(255,255,255,.04));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+@keyframes gshift{0%,100%{background-position:0 50%}50%{background-position:100% 50%}}
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(124,92,252,0.12);
-      border: 1px solid rgba(124,92,252,0.3);
-      border-radius: 100px;
-      padding: 6px 16px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #a78bfa;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 20px;
-    }
-    .badge .dot {
-      width: 6px; height: 6px;
-      background: #a78bfa;
-      border-radius: 50%;
-      animation: pulse 2s ease-in-out infinite;
-    }
+.hero-sub{
+  font-size:1rem;color:var(--muted);max-width:460px;
+  margin:18px auto 36px;line-height:1.8;
+  animation:fadeDown .8s .2s ease both;
+}
+.hero-btns{
+  display:flex;gap:12px;justify-content:center;flex-wrap:wrap;
+  animation:fadeDown .8s .3s ease both;
+}
+.btn-hero{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:14px 28px;border-radius:13px;font-family:'Inter',sans-serif;
+  font-weight:700;font-size:.9rem;text-decoration:none;cursor:pointer;
+  transition:transform .2s,box-shadow .3s;border:none;
+}
+.btn-hero.primary{
+  background:linear-gradient(135deg,var(--violet),#9d7cff,var(--rose));
+  background-size:200%;color:#fff;
+  box-shadow:0 8px 28px rgba(124,92,252,.4);
+  animation:gshift 3s ease-in-out infinite;
+}
+.btn-hero.primary:hover{transform:translateY(-3px);box-shadow:0 14px 40px rgba(124,92,252,.6)}
+.btn-hero.ghost{
+  background:var(--surface2);border:1px solid var(--border2);color:var(--text);
+}
+.btn-hero.ghost:hover{transform:translateY(-2px);background:rgba(255,255,255,.08)}
 
-    h1 {
-      font-size: clamp(2.2rem, 5vw, 3.8rem);
-      font-weight: 700;
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      background: linear-gradient(135deg, #fff 30%, #a78bfa 70%, var(--accent2) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      margin-bottom: 12px;
-    }
+.scroll-hint{
+  position:absolute;bottom:32px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  opacity:.25;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  animation:fadeDown 1s .8s both;
+}
+.s-line{width:1px;height:36px;background:linear-gradient(to bottom,transparent,var(--vsoft));position:relative;overflow:hidden}
+.s-line::after{content:'';position:absolute;top:-100%;left:0;width:100%;height:100%;background:var(--vsoft);animation:sdrop 2s ease-in-out infinite}
+@keyframes sdrop{0%{top:-100%}100%{top:200%}}
 
-    .subtitle {
-      color: var(--muted);
-      font-size: 1rem;
-      font-weight: 400;
-    }
+/* ══════════════════════════════════════════════
+   TOOL SECTION
+══════════════════════════════════════════════ */
+.tool-section{
+  padding:0 20px 100px;
+  max-width:800px;margin:0 auto;
+}
 
-    /* ── Card ── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 24px;
-      padding: 36px;
-      width: 100%;
-      max-width: 720px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 32px 64px rgba(0,0,0,0.5);
-      animation: fadeUp 0.8s ease both;
-      transition: box-shadow 0.3s;
-    }
-    .card:hover {
-      box-shadow: 0 0 0 1px rgba(124,92,252,0.2), 0 32px 80px rgba(0,0,0,0.6), 0 0 60px var(--glow);
-    }
+/* CARD */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:24px;padding:36px;
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  box-shadow:0 0 0 1px rgba(255,255,255,.02),0 32px 64px rgba(0,0,0,.5);
+  transition:box-shadow .3s;margin-bottom:20px;
+}
+.card:hover{box-shadow:0 0 0 1px rgba(124,92,252,.18),0 32px 80px rgba(0,0,0,.6),0 0 60px rgba(124,92,252,.12)}
 
-    /* ── Mode Toggle ── */
-    .mode-toggle {
-      display: flex;
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 4px;
-      margin-bottom: 28px;
-      position: relative;
-    }
-    .mode-toggle .slider {
-      position: absolute;
-      top: 4px; left: 4px;
-      height: calc(100% - 8px);
-      width: calc(50% - 4px);
-      background: linear-gradient(135deg, var(--accent), #9d7cff);
-      border-radius: 10px;
-      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-      box-shadow: 0 4px 20px rgba(124,92,252,0.4);
-    }
-    .mode-toggle.decrypt .slider { transform: translateX(100%); }
-    .mode-btn {
-      flex: 1;
-      padding: 12px 20px;
-      border: none;
-      background: transparent;
-      color: var(--muted);
-      font-family: inherit;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: 10px;
-      position: relative;
-      z-index: 1;
-      transition: color 0.3s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    .mode-btn.active { color: #fff; }
+.card-header{
+  display:flex;align-items:center;gap:12px;margin-bottom:28px;
+  padding-bottom:20px;border-bottom:1px solid var(--border);
+}
+.card-icon{
+  width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,var(--violet),var(--rose));
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;flex-shrink:0;
+  box-shadow:0 4px 16px rgba(124,92,252,.35);
+}
+.card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1.1rem}
+.card-sub{font-size:.78rem;color:var(--muted);margin-top:2px}
 
-    /* ── Labels & Inputs ── */
-    .field { margin-bottom: 22px; }
-    label {
-      display: block;
-      font-size: 0.8rem;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 8px;
-    }
+/* MODE TOGGLE */
+.mode-wrap{margin-bottom:26px}
+.mode-toggle{
+  display:flex;background:rgba(0,0,0,.35);
+  border:1px solid var(--border);border-radius:14px;padding:4px;
+  position:relative;
+}
+.m-slider{
+  position:absolute;top:4px;left:4px;
+  height:calc(100% - 8px);width:calc(50% - 4px);
+  background:linear-gradient(135deg,var(--violet),#9d7cff);
+  border-radius:10px;
+  transition:transform .35s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 4px 20px rgba(124,92,252,.4);
+}
+.mode-toggle.dec .m-slider{transform:translateX(100%)}
+.m-btn{
+  flex:1;padding:11px 16px;border:none;background:transparent;
+  color:var(--muted);font-family:'Inter',sans-serif;font-size:.88rem;font-weight:600;
+  cursor:pointer;border-radius:10px;position:relative;z-index:1;
+  transition:color .3s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.m-btn.on{color:#fff}
 
-    textarea, input[type="range"] {
-      width: 100%;
-      font-family: 'JetBrains Mono', monospace;
-    }
+/* TAB SWITCHER (Brute Force) */
+.tabs{display:flex;gap:4px;margin-bottom:20px}
+.tab-btn{
+  padding:8px 18px;border-radius:10px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);
+  font-family:'Inter',sans-serif;font-size:.8rem;font-weight:600;
+  cursor:pointer;transition:all .2s;
+}
+.tab-btn.active{
+  background:rgba(124,92,252,.12);border-color:rgba(124,92,252,.3);color:var(--vsoft);
+}
 
-    textarea {
-      background: rgba(0,0,0,0.35);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      color: var(--text);
-      font-size: 0.95rem;
-      padding: 16px;
-      resize: vertical;
-      min-height: 120px;
-      outline: none;
-      transition: border-color 0.3s, box-shadow 0.3s;
-    }
-    textarea:focus {
-      border-color: rgba(124,92,252,0.6);
-      box-shadow: 0 0 0 3px rgba(124,92,252,0.15);
-    }
-    textarea::placeholder { color: rgba(255,255,255,0.2); }
+/* LABEL */
+label.lbl{
+  display:block;font-size:.72rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:8px;
+}
 
-    /* ── Shift Slider ── */
-    .shift-row {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .shift-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: #a78bfa;
-      min-width: 40px;
-      text-align: center;
-    }
+/* TEXTAREA */
+textarea{
+  width:100%;background:rgba(0,0,0,.35);
+  border:1px solid var(--border);border-radius:14px;
+  color:var(--text);font-family:'JetBrains Mono',monospace;font-size:.92rem;
+  padding:16px;resize:vertical;min-height:110px;outline:none;
+  transition:border-color .3s,box-shadow .3s;
+}
+textarea:focus{border-color:rgba(124,92,252,.6);box-shadow:0 0 0 3px rgba(124,92,252,.12)}
+textarea::placeholder{color:rgba(255,255,255,.18)}
 
-    input[type="range"] {
-      -webkit-appearance: none;
-      appearance: none;
-      height: 6px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 100px;
-      outline: none;
-      cursor: pointer;
-    }
-    input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 20px; height: 20px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent), #9d7cff);
-      box-shadow: 0 0 0 4px rgba(124,92,252,0.25), 0 4px 12px rgba(124,92,252,0.5);
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+/* SLIDER */
+.shift-row{display:flex;align-items:center;gap:14px}
+input[type=range]{
+  flex:1;-webkit-appearance:none;appearance:none;
+  height:6px;background:rgba(255,255,255,.1);border-radius:100px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+  background:linear-gradient(135deg,var(--violet),#9d7cff);
+  box-shadow:0 0 0 4px rgba(124,92,252,.2),0 4px 12px rgba(124,92,252,.5);
+  cursor:pointer;transition:transform .2s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2)}
+.shift-num{
+  font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;
+  color:var(--vsoft);min-width:38px;text-align:center;
+}
 
-    /* ── Button ── */
-    .btn {
-      width: 100%;
-      padding: 16px;
-      border: none;
-      border-radius: 14px;
-      background: linear-gradient(135deg, var(--accent) 0%, #9d7cff 50%, var(--accent2) 100%);
-      background-size: 200% 200%;
-      color: #fff;
-      font-family: inherit;
-      font-size: 1rem;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.3s, background-position 0.5s;
-      box-shadow: 0 8px 32px rgba(124,92,252,0.4);
-      margin-top: 4px;
-    }
-    .btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 40px rgba(124,92,252,0.6);
-      background-position: right center;
-    }
-    .btn:active { transform: translateY(0); }
-    .btn.loading {
-      opacity: 0.7;
-      pointer-events: none;
-    }
+/* FIELD SPACING */
+.field{margin-bottom:20px}
 
-    /* ── Result ── */
-    #result-section {
-      width: 100%;
-      max-width: 720px;
-      margin-top: 28px;
-      animation: fadeUp 0.5s ease both;
-    }
+/* BUTTON */
+.btn-go{
+  width:100%;padding:16px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,var(--violet),#9d7cff,var(--rose));
+  background-size:200%;
+  color:#fff;font-family:'Inter',sans-serif;font-size:.95rem;font-weight:700;
+  cursor:pointer;transition:transform .2s,box-shadow .3s;
+  box-shadow:0 8px 28px rgba(124,92,252,.4);
+  animation:gshift 3s ease-in-out infinite;
+  margin-top:4px;
+}
+.btn-go:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(124,92,252,.6)}
+.btn-go:active{transform:translateY(0)}
+.btn-go:disabled{opacity:.6;pointer-events:none}
 
-    .result-card {
-      background: rgba(124,92,252,0.06);
-      border: 1px solid rgba(124,92,252,0.25);
-      border-radius: 20px;
-      padding: 28px;
-      margin-bottom: 20px;
-      backdrop-filter: blur(10px);
-      position: relative;
-      overflow: hidden;
-    }
-    .result-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      border-radius: 20px 20px 0 0;
-    }
+/* ERROR */
+.err{
+  background:rgba(252,92,125,.1);border:1px solid rgba(252,92,125,.3);
+  border-radius:10px;color:#fb7ca0;
+  padding:11px 16px;font-size:.84rem;margin-top:12px;
+  display:none;
+}
+.err.show{display:block}
 
-    .result-label {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: #a78bfa;
-      margin-bottom: 10px;
-    }
-    .result-text {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.1rem;
-      color: #fff;
-      word-break: break-all;
-      line-height: 1.7;
-    }
+/* ══════════════════════════════════════════════
+   RESULT CARD
+══════════════════════════════════════════════ */
+.result-card{
+  background:rgba(124,92,252,.05);
+  border:1px solid rgba(124,92,252,.22);
+  border-radius:20px;padding:26px;margin-bottom:16px;
+  position:relative;overflow:hidden;
+  display:none;
+}
+.result-card.show{display:block;animation:fadeUp .4s ease both}
+.result-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--violet),var(--rose));
+  border-radius:20px 20px 0 0;
+}
+.res-label{
+  font-size:.72rem;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--vsoft);margin-bottom:10px;
+}
+.res-text{
+  font-family:'JetBrains Mono',monospace;font-size:1rem;
+  color:#fff;word-break:break-all;line-height:1.8;
+}
+.copy-btn{
+  position:absolute;top:18px;right:18px;
+  background:rgba(124,92,252,.14);border:1px solid rgba(124,92,252,.28);
+  color:var(--vsoft);border-radius:8px;padding:5px 12px;
+  font-size:.72rem;font-weight:700;font-family:'Inter',sans-serif;cursor:pointer;
+  transition:all .2s;
+}
+.copy-btn:hover{background:rgba(124,92,252,.28)}
+.copy-btn.ok{color:var(--green);border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08)}
 
-    .copy-btn {
-      position: absolute;
-      top: 20px; right: 20px;
-      background: rgba(124,92,252,0.15);
-      border: 1px solid rgba(124,92,252,0.3);
-      color: #a78bfa;
-      border-radius: 8px;
-      padding: 6px 12px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .copy-btn:hover { background: rgba(124,92,252,0.3); }
-    .copy-btn.copied { color: #4ade80; border-color: rgba(74,222,128,0.4); background: rgba(74,222,128,0.1); }
+/* STATS ROW */
+.stats-row{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+  margin-bottom:16px;display:none;
+}
+.stats-row.show{display:grid}
+.stat-box{
+  background:rgba(0,0,0,.3);border:1px solid var(--border);
+  border-radius:14px;padding:14px;text-align:center;
+}
+.stat-v{
+  font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;
+  color:var(--vsoft);display:block;
+}
+.stat-l{font-size:.7rem;color:var(--muted);font-weight:700;letter-spacing:.06em;text-transform:uppercase}
 
-    /* ── Shift Table ── */
-    .table-wrap {
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-    }
-    .table-title {
-      padding: 14px 20px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--muted);
-      border-bottom: 1px solid var(--border);
-    }
-    .alphabet-grid {
-      display: flex;
-      overflow-x: auto;
-      padding: 16px 14px 12px;
-      gap: 4px;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(124,92,252,0.3) transparent;
-    }
-    .alpha-pair {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      min-width: 30px;
-    }
-    .alpha-orig, .alpha-shifted {
-      width: 28px; height: 28px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 6px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.75rem;
-      font-weight: 600;
-    }
-    .alpha-orig {
-      background: rgba(255,255,255,0.06);
-      color: var(--muted);
-    }
-    .alpha-shifted {
-      background: rgba(124,92,252,0.15);
-      color: #a78bfa;
-    }
-    .alpha-pair.highlight .alpha-orig { background: rgba(252,92,125,0.2); color: #fc5c7d; }
-    .alpha-pair.highlight .alpha-shifted { background: rgba(245,200,66,0.2); color: var(--gold); transform: scale(1.15); }
+/* ALPHABET TABLE */
+.alpha-card{
+  background:rgba(0,0,0,.28);border:1px solid var(--border);
+  border-radius:16px;overflow:hidden;
+  display:none;
+}
+.alpha-card.show{display:block}
+.alpha-head{
+  padding:12px 18px;font-size:.7rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;
+}
+.alpha-head::before{
+  content:'';display:block;width:20px;height:2px;
+  background:linear-gradient(90deg,var(--violet),var(--rose));border-radius:2px;
+}
+.alpha-grid{
+  display:flex;overflow-x:auto;padding:14px 12px 10px;gap:4px;
+  scrollbar-width:thin;scrollbar-color:rgba(124,92,252,.3) transparent;
+}
+.apair{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:28px}
+.ao,.as{
+  width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.7rem;font-weight:600;
+}
+.ao{background:rgba(255,255,255,.05);color:var(--muted)}
+.as{background:rgba(124,92,252,.14);color:var(--vsoft)}
+.apair.hl .ao{background:rgba(252,92,125,.18);color:#fb7ca0}
+.apair.hl .as{background:rgba(245,200,66,.16);color:var(--gold);transform:scale(1.12)}
 
-    /* ── Stats row ── */
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-top: 20px;
-    }
-    .stat-box {
-      background: rgba(0,0,0,0.3);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      text-align: center;
-    }
-    .stat-val {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #a78bfa;
-      display: block;
-    }
-    .stat-lbl { font-size: 0.72rem; color: var(--muted); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+/* ══════════════════════════════════════════════
+   BRUTE FORCE PANEL
+══════════════════════════════════════════════ */
+.brute-panel{display:none}
+.brute-panel.show{display:block}
+.brute-list{
+  max-height:420px;overflow-y:auto;
+  display:flex;flex-direction:column;gap:6px;margin-top:16px;
+  scrollbar-width:thin;scrollbar-color:rgba(124,92,252,.3) transparent;
+}
+.brute-item{
+  background:rgba(0,0,0,.3);border:1px solid var(--border);
+  border-radius:10px;padding:11px 14px;
+  display:flex;align-items:flex-start;gap:12px;
+  cursor:pointer;transition:border-color .2s,background .2s;
+}
+.brute-item:hover{border-color:rgba(124,92,252,.3);background:rgba(124,92,252,.05)}
+.brute-shift{
+  font-family:'JetBrains Mono',monospace;font-size:.8rem;font-weight:700;
+  color:var(--vsoft);background:rgba(124,92,252,.12);border:1px solid rgba(124,92,252,.2);
+  border-radius:7px;padding:3px 9px;flex-shrink:0;min-width:46px;text-align:center;
+}
+.brute-text{
+  font-family:'JetBrains Mono',monospace;font-size:.82rem;
+  color:var(--text);word-break:break-all;line-height:1.5;
+}
 
-    /* ── Animations ── */
-    @keyframes fadeDown {
-      from { opacity: 0; transform: translateY(-24px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(0.8); }
-    }
-    @keyframes shimmer {
-      0% { background-position: -200% center; }
-      100% { background-position: 200% center; }
-    }
+/* ══════════════════════════════════════════════
+   FEATURES / INFO SECTION
+══════════════════════════════════════════════ */
+.info-section{
+  max-width:800px;margin:0 auto;padding:20px 20px 80px;
+}
+.sec-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--vsoft);margin-bottom:14px;
+}
+.sec-eyebrow::before{
+  content:'';width:22px;height:2px;
+  background:linear-gradient(90deg,var(--violet),var(--rose));border-radius:2px;
+}
+.sec-title{
+  font-family:'Syne',sans-serif;font-weight:800;
+  font-size:clamp(1.7rem,3.5vw,2.6rem);letter-spacing:-.03em;margin-bottom:14px;
+}
+.sec-title em{
+  font-style:normal;
+  background:linear-gradient(135deg,var(--vsoft),var(--rose));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.sec-desc{color:var(--muted);font-size:.92rem;max-width:520px;line-height:1.8;margin-bottom:40px}
 
-    .hidden { display: none !important; }
+.feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.feat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:24px 22px;position:relative;overflow:hidden;
+  transition:transform .25s,border-color .25s,box-shadow .25s;cursor:default;
+}
+.feat-card::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 0%,rgba(124,92,252,.07),transparent 70%);
+  opacity:0;transition:opacity .3s;
+}
+.feat-card:hover{transform:translateY(-4px);border-color:rgba(124,92,252,.28);box-shadow:0 16px 40px rgba(0,0,0,.4)}
+.feat-card:hover::before{opacity:1}
+.f-ico{font-size:1.8rem;margin-bottom:14px;display:block}
+.f-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.98rem;margin-bottom:6px}
+.f-desc{font-size:.8rem;color:var(--muted);line-height:1.7}
+.f-tag{
+  display:inline-block;margin-top:12px;font-size:9px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:100px;
+}
+.tv{background:rgba(124,92,252,.14);color:var(--vsoft);border:1px solid rgba(124,92,252,.18)}
+.tr{background:rgba(252,92,125,.1);color:#fb7ca0;border:1px solid rgba(252,92,125,.18)}
+.tc{background:rgba(34,211,238,.08);color:var(--cyan);border:1px solid rgba(34,211,238,.15)}
+.tg{background:rgba(74,222,128,.08);color:var(--green);border:1px solid rgba(74,222,128,.15)}
+.ty{background:rgba(251,191,36,.08);color:var(--gold);border:1px solid rgba(251,191,36,.15)}
 
-    /* ── Error ── */
-    .error-msg {
-      background: rgba(252,92,125,0.1);
-      border: 1px solid rgba(252,92,125,0.3);
-      border-radius: 10px;
-      color: #fc5c7d;
-      padding: 12px 16px;
-      font-size: 0.85rem;
-      margin-top: 12px;
-    }
+/* ══════════════════════════════════════════════
+   HOW IT WORKS
+══════════════════════════════════════════════ */
+.algo-section{max-width:800px;margin:0 auto;padding:20px 20px 80px}
+.cipher-demo-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:18px;overflow:hidden;margin-top:32px;
+}
+.demo-bar{
+  background:rgba(0,0,0,.35);padding:14px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+}
+.demo-dots{display:flex;gap:6px}
+.dd{width:11px;height:11px;border-radius:50%}
+.dd.r{background:#ff5f57}.dd.y{background:#febc2e}.dd.g{background:#28c840}
+.demo-lbl{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--muted)}
+.demo-body{padding:28px 24px;display:flex;flex-direction:column;gap:20px}
+.demo-row{display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:4px}
+.demo-rlbl{
+  font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);min-width:74px;flex-shrink:0;
+}
+.demo-chars{display:flex;gap:3px;flex-wrap:nowrap}
+.dch{
+  width:30px;height:32px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:.78rem;font-weight:600;
+  transition:transform .2s;cursor:default;
+}
+.dch:hover{transform:scale(1.15)}
+.dch.orig{background:rgba(255,255,255,.05);color:#94a3b8}
+.dch.enc{background:rgba(252,92,125,.1);color:#fb7ca0;border:1px solid rgba(252,92,125,.18)}
+.dch.sp{background:transparent;color:var(--dim)}
+.arr-row{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:11px}
+.arr-line{flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(124,92,252,.35),transparent)}
 
-    @media (max-width: 600px) {
-      .card { padding: 24px 18px; }
-      .stats-row { grid-template-columns: repeat(2,1fr); }
-    }
-  </style>
+/* ══════════════════════════════════════════════
+   STATS BAND
+══════════════════════════════════════════════ */
+.stats-band{
+  max-width:800px;margin:0 auto 80px;padding:0 20px;
+}
+.stats-inner{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:36px;
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:24px;
+  position:relative;overflow:hidden;
+}
+.stats-inner::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--violet),var(--rose),var(--cyan));
+}
+.sb-item{text-align:center}
+.sb-num{
+  font-family:'Syne',sans-serif;font-size:2.5rem;font-weight:800;
+  background:linear-gradient(135deg,#fff,var(--vsoft));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  line-height:1;display:block;margin-bottom:6px;
+}
+.sb-lbl{font-size:.72rem;color:var(--muted);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+
+/* ══════════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════════ */
+footer{
+  border-top:1px solid var(--border);
+  max-width:800px;margin:0 auto;
+  padding:36px 20px 40px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;
+}
+.foot-brand{
+  font-family:'Syne',sans-serif;font-weight:800;
+  background:linear-gradient(135deg,var(--vsoft),var(--rose));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  font-size:.92rem;
+}
+.foot-tags{display:flex;gap:8px;flex-wrap:wrap}
+.ftag{
+  font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  padding:4px 10px;border-radius:7px;
+}
+.ft-py{background:rgba(34,211,238,.08);color:var(--cyan);border:1px solid rgba(34,211,238,.15)}
+.ft-fl{background:rgba(124,92,252,.1);color:var(--vsoft);border:1px solid rgba(124,92,252,.15)}
+.ft-t1{background:rgba(251,191,36,.08);color:var(--gold);border:1px solid rgba(251,191,36,.15)}
+.foot-note{font-size:.75rem;color:var(--dim)}
+
+/* ══════════════════════════════════════════════
+   SCROLL REVEAL
+══════════════════════════════════════════════ */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s ease,transform .7s ease}
+.reveal.vis{opacity:1;transform:translateY(0)}
+
+/* ══════════════════════════════════════════════
+   KEYFRAMES
+══════════════════════════════════════════════ */
+@keyframes fadeDown{from{opacity:0;transform:translateY(-18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════ */
+@media(max-width:640px){
+  nav{padding:12px 20px}
+  .nav-links .nav-link{display:none}
+  .r1,.r2,.r3{display:none}
+  .card{padding:22px 16px}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .feat-grid{grid-template-columns:1fr 1fr}
+  footer{flex-direction:column;text-align:center}
+}
+@media(max-width:400px){
+  .feat-grid{grid-template-columns:1fr}
+}
+</style>
 </head>
 <body>
 
-<!-- 3D animated background -->
-<canvas id="bg-canvas"></canvas>
+<canvas id="cvs"></canvas>
 
-<!-- Ambient orbs -->
-<div class="orb orb1"></div>
-<div class="orb orb2"></div>
-<div class="orb orb3"></div>
+<div class="page">
 
-<div class="app">
-  <header>
-    <div class="badge"><span class="dot"></span> Task-01 · Python Project</div>
-    <h1>Caesar Cipher</h1>
-    <p class="subtitle">Encrypt & decrypt messages using the classic shift cipher algorithm</p>
-  </header>
+<!-- ══════════════ NAV ══════════════ -->
+<nav>
+  <a class="nav-brand" href="#">
+    <div class="lock-ico">🔐</div>
+    Caesar Cipher
+  </a>
+  <div class="nav-links">
+    <button class="nav-link" onclick="scrollTo('#tool')">Tool</button>
+    <button class="nav-link" onclick="scrollTo('#features')">Features</button>
+    <button class="nav-link" onclick="scrollTo('#algo')">Algorithm</button>
+  </div>
+  <button class="nav-cta" onclick="scrollTo('#tool')">🚀 Start Encrypting</button>
+</nav>
 
-  <!-- Main Card -->
-  <div class="card">
-    <!-- Mode Toggle -->
-    <div class="mode-toggle" id="modeToggle">
-      <div class="slider"></div>
-      <button class="mode-btn active" id="encBtn" onclick="setMode('encrypt')">
-        🔒 Encrypt
-      </button>
-      <button class="mode-btn" id="decBtn" onclick="setMode('decrypt')">
-        🔓 Decrypt
-      </button>
-    </div>
+<!-- ══════════════ HERO ══════════════ -->
+<section class="hero">
+  <div class="ring r1"></div>
+  <div class="ring r2"></div>
+  <div class="ring r3"></div>
 
-    <!-- Input -->
-    <div class="field">
-      <label>Your Message</label>
-      <textarea id="inputText" placeholder="Enter your message here…" rows="4"></textarea>
-    </div>
+  <div class="badge"><span class="dot"></span> Task-01 · Python Project</div>
 
-    <!-- Shift -->
-    <div class="field">
-      <label>Shift Value</label>
-      <div class="shift-row">
-        <input type="range" id="shiftRange" min="1" max="25" value="3" oninput="updateShift(this.value)"/>
-        <div class="shift-val" id="shiftDisplay">3</div>
-      </div>
-    </div>
+  <h1>
+    <span class="g1">Caesar Cipher</span>
+    <span class="g2">Encrypt &amp; Decrypt</span>
+  </h1>
 
-    <!-- Submit -->
-    <button class="btn" id="processBtn" onclick="processText()">
-      🔐 Process Message
-    </button>
+  <p class="hero-sub">
+    A beautiful, animated cryptography tool running locally on your machine.
+    Encrypt secret messages, decrypt ciphertext, and visualize the alphabet shift in real time.
+  </p>
 
-    <div class="error-msg hidden" id="errorMsg"></div>
+  <div class="hero-btns">
+    <button class="btn-hero primary" onclick="scrollTo('#tool')">🔒 Start Encrypting</button>
+    <button class="btn-hero ghost" onclick="scrollTo('#algo')">📖 How It Works</button>
   </div>
 
-  <!-- Result Section -->
-  <div id="result-section" class="hidden">
+  <div class="scroll-hint">scroll<div class="s-line"></div></div>
+</section>
 
-    <div class="result-card">
-      <div class="result-label" id="resultLabel">Encrypted Output</div>
-      <button class="copy-btn" id="copyBtn" onclick="copyResult()">Copy</button>
-      <div class="result-text" id="resultText"></div>
-    </div>
+<!-- ══════════════ TOOL ══════════════ -->
+<section id="tool" class="tool-section reveal">
 
-    <div class="stats-row">
-      <div class="stat-box">
-        <span class="stat-val" id="statChars">0</span>
-        <span class="stat-lbl">Characters</span>
-      </div>
-      <div class="stat-box">
-        <span class="stat-val" id="statLetters">0</span>
-        <span class="stat-lbl">Letters Shifted</span>
-      </div>
-      <div class="stat-box">
-        <span class="stat-val" id="statShift">3</span>
-        <span class="stat-lbl">Shift Used</span>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">🔐</div>
+      <div>
+        <div class="card-title">Cipher Tool</div>
+        <div class="card-sub">Encrypt or decrypt any message using a custom shift value</div>
       </div>
     </div>
 
-    <div class="table-wrap" style="margin-top:20px;">
-      <div class="table-title">🔤 Alphabet Mapping (Original → Shifted)</div>
-      <div class="alphabet-grid" id="alphaGrid"></div>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-cipher" onclick="switchTab('cipher')">🔑 Cipher</button>
+      <button class="tab-btn" id="tab-brute" onclick="switchTab('brute')">🔍 Brute Force</button>
     </div>
 
+    <!-- ── CIPHER PANEL ── -->
+    <div id="panel-cipher">
+      <!-- Mode toggle -->
+      <div class="field">
+        <label class="lbl">Mode</label>
+        <div class="mode-toggle" id="modeToggle">
+          <div class="m-slider"></div>
+          <button class="m-btn on" id="encBtn" onclick="setMode('encrypt')">🔒 Encrypt</button>
+          <button class="m-btn" id="decBtn" onclick="setMode('decrypt')">🔓 Decrypt</button>
+        </div>
+      </div>
+
+      <!-- Input -->
+      <div class="field">
+        <label class="lbl" for="msgInput">Your Message</label>
+        <textarea id="msgInput" placeholder="Type your message here…"></textarea>
+      </div>
+
+      <!-- Shift -->
+      <div class="field">
+        <label class="lbl">Shift Value</label>
+        <div class="shift-row">
+          <input type="range" id="shiftRange" min="1" max="25" value="3" oninput="updateShift(this.value)"/>
+          <div class="shift-num" id="shiftDisplay">3</div>
+        </div>
+      </div>
+
+      <button class="btn-go" id="goBtn" onclick="runCipher()">🔐 Process Message</button>
+      <div class="err" id="errMsg"></div>
+    </div>
+
+    <!-- ── BRUTE FORCE PANEL ── -->
+    <div id="panel-brute" class="brute-panel">
+      <div class="field">
+        <label class="lbl" for="bruteInput">Encrypted Message</label>
+        <textarea id="bruteInput" placeholder="Paste an encrypted message to try all 25 shifts…"></textarea>
+      </div>
+      <button class="btn-go" id="bruteBtn" onclick="runBrute()">🔍 Try All Shifts</button>
+      <div class="err" id="bruteErr"></div>
+      <div class="brute-list" id="bruteList"></div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card" id="resultCard">
+    <div class="res-label" id="resLabel">Encrypted Output</div>
+    <button class="copy-btn" id="copyBtn" onclick="copyResult()">Copy</button>
+    <div class="res-text" id="resText"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row" id="statsRow">
+    <div class="stat-box"><span class="stat-v" id="sc">0</span><span class="stat-l">Characters</span></div>
+    <div class="stat-box"><span class="stat-v" id="sl">0</span><span class="stat-l">Letters Shifted</span></div>
+    <div class="stat-box"><span class="stat-v" id="ss">3</span><span class="stat-l">Shift Used</span></div>
+  </div>
+
+  <!-- Alphabet map -->
+  <div class="alpha-card" id="alphaCard">
+    <div class="alpha-head">Alphabet Mapping — Original → Shifted</div>
+    <div class="alpha-grid" id="alphaGrid"></div>
+  </div>
+
+</section>
+
+<!-- ══════════════ FEATURES ══════════════ -->
+<section id="features" class="info-section reveal">
+  <div class="sec-eyebrow">Features</div>
+  <h2 class="sec-title">Everything you need to<br/><em>encrypt messages</em></h2>
+  <p class="sec-desc">Built with Python + Flask. Zero external JS frameworks. Just run and go.</p>
+
+  <div class="feat-grid">
+    <div class="feat-card">
+      <span class="f-ico">🔒</span>
+      <div class="f-title">One-Click Encrypt</div>
+      <div class="f-desc">Type a message, set a shift, hit the button. Output appears with a character-by-character reveal animation.</div>
+      <span class="f-tag tv">Core</span>
+    </div>
+    <div class="feat-card">
+      <span class="f-ico">🔓</span>
+      <div class="f-title">Instant Decrypt</div>
+      <div class="f-desc">Flip the toggle to decrypt mode and recover any Caesar-ciphered message instantly.</div>
+      <span class="f-tag tr">Core</span>
+    </div>
+    <div class="feat-card">
+      <span class="f-ico">🔍</span>
+      <div class="f-title">Brute Force</div>
+      <div class="f-desc">Don't know the shift? Try all 25 possibilities at once. Click any result to use it as input.</div>
+      <span class="f-tag tc">Bonus</span>
+    </div>
+    <div class="feat-card">
+      <span class="f-ico">🔤</span>
+      <div class="f-title">Alphabet Map</div>
+      <div class="f-desc">Full A→Z visual mapping table. Letters used in your message are highlighted in gold.</div>
+      <span class="f-tag ty">Visual</span>
+    </div>
+    <div class="feat-card">
+      <span class="f-ico">✨</span>
+      <div class="f-title">3D Particle BG</div>
+      <div class="f-desc">Live animated starfield that reacts to your mouse. Every visit feels alive.</div>
+      <span class="f-tag tv">Design</span>
+    </div>
+    <div class="feat-card">
+      <span class="f-ico">📋</span>
+      <div class="f-title">Copy in One Click</div>
+      <div class="f-desc">Copy button on the result card. Green flash confirms it's in your clipboard.</div>
+      <span class="f-tag tg">UX</span>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ STATS BAND ══════════════ -->
+<div class="stats-band reveal">
+  <div class="stats-inner">
+    <div class="sb-item"><span class="sb-num">25</span><span class="sb-lbl">Shift Values</span></div>
+    <div class="sb-item"><span class="sb-num">2</span><span class="sb-lbl">Cipher Modes</span></div>
+    <div class="sb-item"><span class="sb-num">∞</span><span class="sb-lbl">Messages</span></div>
+    <div class="sb-item"><span class="sb-num">3D</span><span class="sb-lbl">Background</span></div>
   </div>
 </div>
 
-<!-- 3D Background Script -->
+<!-- ══════════════ ALGORITHM ══════════════ -->
+<section id="algo" class="algo-section reveal">
+  <div class="sec-eyebrow">Algorithm</div>
+  <h2 class="sec-title">How Caesar Cipher<br/><em>actually works</em></h2>
+  <p class="sec-desc">Each letter shifts forward by a fixed number in the alphabet. Spaces and symbols stay unchanged. Julius Caesar used shift 3 — and so does our default.</p>
+
+  <div class="cipher-demo-box">
+    <div class="demo-bar">
+      <div class="demo-dots"><div class="dd r"></div><div class="dd y"></div><div class="dd g"></div></div>
+      <div class="demo-lbl">// caesar_cipher.py — live demo · shift = 3</div>
+    </div>
+    <div class="demo-body">
+      <div class="demo-row">
+        <div class="demo-rlbl">Input</div>
+        <div class="demo-chars" id="demoOrig"></div>
+      </div>
+      <div class="arr-row">
+        <div class="arr-line"></div>
+        <span style="font-size:.7rem;color:var(--vsoft);font-weight:700;white-space:nowrap;flex-shrink:0">shift +3 →</span>
+        <div class="arr-line"></div>
+      </div>
+      <div class="demo-row">
+        <div class="demo-rlbl">Output</div>
+        <div class="demo-chars" id="demoOut"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ FOOTER ══════════════ -->
+<footer>
+  <div class="foot-brand">🔐 Caesar Cipher Tool</div>
+  <div class="foot-tags">
+    <span class="ftag ft-py">Python 3</span>
+    <span class="ftag ft-fl">Flask</span>
+    <span class="ftag ft-t1">Task-01</span>
+  </div>
+  <div class="foot-note">Runs on localhost:5000 · Built with ❤️</div>
+</footer>
+
+</div><!-- /page -->
+
 <script>
-// ── 3D Particle Field ──
-const canvas = document.getElementById('bg-canvas');
-const ctx = canvas.getContext('2d');
-let W, H, particles = [], lines = [];
-
-function resize() {
-  W = canvas.width = window.innerWidth;
-  H = canvas.height = window.innerHeight;
+/* ════════════════════════
+   STARFIELD
+════════════════════════ */
+const cv=document.getElementById('cvs'),cx=cv.getContext('2d');
+let W,H,stars=[];
+const COLS=['124,92,252','252,92,125','34,211,238','251,191,36','255,255,255'];
+function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight}
+resize();window.addEventListener('resize',()=>{resize();init()});
+function init(){
+  stars=[];
+  const n=Math.floor(W*H/3500);
+  for(let i=0;i<n;i++)stars.push({
+    x:Math.random()*W,y:Math.random()*H,
+    vx:(Math.random()-.5)*.14,vy:(Math.random()-.5)*.14,
+    r:Math.random()*1.6+.3,
+    col:COLS[Math.floor(Math.random()*COLS.length)],
+    a:Math.random()*.55+.1,
+    tp:Math.random()*Math.PI*2,ts:Math.random()*.02+.005
+  });
 }
-resize();
-window.addEventListener('resize', () => { resize(); initParticles(); });
+init();
+let mx=W/2,my=H/2,tick=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+function frame(){
+  cx.clearRect(0,0,W,H);tick+=.016;
+  for(const s of stars){
+    s.x+=s.vx+(mx-W/2)*.000028;
+    s.y+=s.vy+(my-H/2)*.000028;
+    if(s.x<0)s.x=W;if(s.x>W)s.x=0;
+    if(s.y<0)s.y=H;if(s.y>H)s.y=0;
+    const tw=.5+.5*Math.sin(tick/s.ts+s.tp);
+    cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    cx.fillStyle=`rgba(${s.col},${s.a*tw})`;cx.fill();
+  }
+  for(let i=0;i<stars.length;i++)for(let j=i+1;j<stars.length;j++){
+    const dx=stars[i].x-stars[j].x,dy=stars[i].y-stars[j].y,d=Math.sqrt(dx*dx+dy*dy);
+    if(d<110){cx.beginPath();cx.moveTo(stars[i].x,stars[i].y);cx.lineTo(stars[j].x,stars[j].y);
+      cx.strokeStyle=`rgba(124,92,252,${.06*(1-d/110)})`;cx.lineWidth=.5;cx.stroke();}
+  }
+  requestAnimationFrame(frame);
+}
+frame();
 
-function initParticles() {
-  particles = [];
-  const count = Math.floor((W * H) / 12000);
-  for (let i = 0; i < count; i++) {
-    particles.push({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      r: Math.random() * 1.8 + 0.4,
-      alpha: Math.random() * 0.5 + 0.1,
-      color: Math.random() > 0.5 ? '124,92,252' : (Math.random() > 0.5 ? '252,92,125' : '92,200,252'),
+/* ════════════════════════
+   SCROLL
+════════════════════════ */
+function scrollTo(sel){document.querySelector(sel)?.scrollIntoView({behavior:'smooth',block:'start'})}
+const obs=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis')}),{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
+
+/* ════════════════════════
+   ALGO DEMO
+════════════════════════ */
+function buildDemo(){
+  const word='HELLO WORLD',s=3;
+  const o=document.getElementById('demoOrig'),u=document.getElementById('demoOut');
+  o.innerHTML='';u.innerHTML='';
+  for(const ch of word){
+    const isSp=ch===' ';
+    const d1=document.createElement('div');
+    d1.className=isSp?'dch sp':'dch orig';d1.textContent=isSp?'·':ch;
+    o.appendChild(d1);
+    const enc=isSp?' ':String.fromCharCode((ch.charCodeAt(0)-65+s)%26+65);
+    const d2=document.createElement('div');
+    d2.className=isSp?'dch sp':'dch enc';d2.textContent=isSp?'·':enc;
+    u.appendChild(d2);
+  }
+  [...o.children].forEach((el,i)=>{
+    el.style.cssText='opacity:0;transform:translateY(8px)';
+    setTimeout(()=>{el.style.cssText='transition:all .3s;opacity:1;transform:translateY(0)'},i*45);
+  });
+  [...u.children].forEach((el,i)=>{
+    el.style.cssText='opacity:0;transform:translateY(8px)';
+    setTimeout(()=>{el.style.cssText='transition:all .3s;opacity:1;transform:translateY(0)'},550+i*45);
+  });
+}
+buildDemo();
+
+/* ════════════════════════
+   TABS
+════════════════════════ */
+function switchTab(t){
+  document.getElementById('tab-cipher').classList.toggle('active',t==='cipher');
+  document.getElementById('tab-brute').classList.toggle('active',t==='brute');
+  document.getElementById('panel-cipher').style.display=t==='cipher'?'':'none';
+  document.getElementById('panel-brute').classList.toggle('show',t==='brute');
+  hideResults();
+}
+
+/* ════════════════════════
+   MODE
+════════════════════════ */
+let mode='encrypt',lastOut='';
+function setMode(m){
+  mode=m;
+  const tog=document.getElementById('modeToggle');
+  tog.classList.toggle('dec',m==='decrypt');
+  document.getElementById('encBtn').classList.toggle('on',m==='encrypt');
+  document.getElementById('decBtn').classList.toggle('on',m==='decrypt');
+}
+function updateShift(v){document.getElementById('shiftDisplay').textContent=v}
+
+/* ════════════════════════
+   CIPHER
+════════════════════════ */
+async function runCipher(){
+  const text=document.getElementById('msgInput').value.trim();
+  const shift=+document.getElementById('shiftRange').value;
+  const errEl=document.getElementById('errMsg');
+  const btn=document.getElementById('goBtn');
+  errEl.classList.remove('show');
+  if(!text){errEl.textContent='⚠️ Please enter a message.';errEl.classList.add('show');return}
+  btn.textContent='⏳ Processing…';btn.disabled=true;
+  try{
+    const r=await fetch('/process',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,shift,mode})});
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    lastOut=d.output;
+    showResult(d);
+  }catch(e){errEl.textContent='❌ '+e.message;errEl.classList.add('show')}
+  btn.textContent='🔐 Process Message';btn.disabled=false;
+}
+
+function showResult(d){
+  const rc=document.getElementById('resultCard');
+  rc.classList.add('show');
+  document.getElementById('resLabel').textContent=d.mode==='encrypt'?'🔒 Encrypted Output':'🔓 Decrypted Output';
+  const rt=document.getElementById('resText');
+  rt.textContent='';
+  let i=0;
+  const iv=setInterval(()=>{rt.textContent+=d.output[i++];if(i>=d.output.length)clearInterval(iv)},16);
+  document.getElementById('sc').textContent=d.char_count;
+  document.getElementById('sl').textContent=d.letter_count;
+  document.getElementById('ss').textContent=d.shift;
+  document.getElementById('statsRow').classList.add('show');
+  buildAlpha(d.alphabet,d.shifted,d.used_orig);
+  const cb=document.getElementById('copyBtn');cb.textContent='Copy';cb.classList.remove('ok');
+  rc.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function buildAlpha(orig,shifted,used){
+  const g=document.getElementById('alphaGrid');
+  g.innerHTML='';
+  orig.forEach((o,i)=>{
+    const p=document.createElement('div');
+    p.className='apair'+(used.includes(o)?' hl':'');
+    p.innerHTML=`<div class="ao">${o}</div><div class="as">${shifted[i]}</div>`;
+    g.appendChild(p);
+  });
+  document.getElementById('alphaCard').classList.add('show');
+}
+
+/* ════════════════════════
+   BRUTE FORCE
+════════════════════════ */
+async function runBrute(){
+  const text=document.getElementById('bruteInput').value.trim();
+  const errEl=document.getElementById('bruteErr');
+  const btn=document.getElementById('bruteBtn');
+  errEl.classList.remove('show');
+  if(!text){errEl.textContent='⚠️ Please enter an encrypted message.';errEl.classList.add('show');return}
+  btn.textContent='⏳ Cracking…';btn.disabled=true;
+  try{
+    const r=await fetch('/brute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    const d=await r.json();
+    if(d.error)throw new Error(d.error);
+    const list=document.getElementById('bruteList');
+    list.innerHTML='';
+    d.results.forEach((item,i)=>{
+      const el=document.createElement('div');
+      el.className='brute-item';
+      el.style.cssText='opacity:0;transform:translateY(8px)';
+      el.innerHTML=`<div class="brute-shift">+${item.shift}</div><div class="brute-text">${item.text}</div>`;
+      el.onclick=()=>{document.getElementById('msgInput').value=text;document.getElementById('shiftRange').value=item.shift;updateShift(item.shift);setMode('decrypt');switchTab('cipher')};
+      list.appendChild(el);
+      setTimeout(()=>{el.style.cssText='transition:all .3s;opacity:1;transform:translateY(0)'},i*30);
     });
-  }
-}
-initParticles();
-
-let mouseX = W/2, mouseY = H/2;
-document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
-
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-
-  for (let p of particles) {
-    p.x += p.vx + (mouseX - W/2) * 0.00005;
-    p.y += p.vy + (mouseY - H/2) * 0.00005;
-    if (p.x < 0) p.x = W;
-    if (p.x > W) p.x = 0;
-    if (p.y < 0) p.y = H;
-    if (p.y > H) p.y = 0;
-
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(${p.color},${p.alpha})`;
-    ctx.fill();
-  }
-
-  // Draw connecting lines
-  for (let i = 0; i < particles.length; i++) {
-    for (let j = i + 1; j < particles.length; j++) {
-      const dx = particles[i].x - particles[j].x;
-      const dy = particles[i].y - particles[j].y;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      if (dist < 120) {
-        ctx.beginPath();
-        ctx.moveTo(particles[i].x, particles[i].y);
-        ctx.lineTo(particles[j].x, particles[j].y);
-        ctx.strokeStyle = `rgba(124,92,252,${0.06 * (1 - dist/120)})`;
-        ctx.lineWidth = 0.5;
-        ctx.stroke();
-      }
-    }
-  }
-
-  requestAnimationFrame(draw);
-}
-draw();
-
-// ── App Logic ──
-let currentMode = 'encrypt';
-let lastResult = '';
-
-function setMode(mode) {
-  currentMode = mode;
-  const toggle = document.getElementById('modeToggle');
-  const encBtn = document.getElementById('encBtn');
-  const decBtn = document.getElementById('decBtn');
-
-  if (mode === 'encrypt') {
-    toggle.classList.remove('decrypt');
-    encBtn.classList.add('active');
-    decBtn.classList.remove('active');
-  } else {
-    toggle.classList.add('decrypt');
-    decBtn.classList.add('active');
-    encBtn.classList.remove('active');
-  }
+  }catch(e){errEl.textContent='❌ '+e.message;errEl.classList.add('show')}
+  btn.textContent='🔍 Try All Shifts';btn.disabled=false;
 }
 
-function updateShift(val) {
-  document.getElementById('shiftDisplay').textContent = val;
-}
-
-async function processText() {
-  const text = document.getElementById('inputText').value.trim();
-  const shift = parseInt(document.getElementById('shiftRange').value);
-  const errorDiv = document.getElementById('errorMsg');
-  const btn = document.getElementById('processBtn');
-
-  errorDiv.classList.add('hidden');
-
-  if (!text) {
-    errorDiv.textContent = '⚠️ Please enter a message to process.';
-    errorDiv.classList.remove('hidden');
-    return;
-  }
-
-  btn.textContent = '⏳ Processing…';
-  btn.classList.add('loading');
-
-  try {
-    const res = await fetch('/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, shift, mode: currentMode })
-    });
-
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-
-    lastResult = data.output;
-    showResult(data);
-  } catch(err) {
-    errorDiv.textContent = '❌ Error: ' + err.message;
-    errorDiv.classList.remove('hidden');
-  } finally {
-    btn.textContent = '🔐 Process Message';
-    btn.classList.remove('loading');
-  }
-}
-
-function showResult(data) {
-  const section = document.getElementById('result-section');
-  section.classList.remove('hidden');
-
-  // Animate text reveal
-  const resultEl = document.getElementById('resultText');
-  document.getElementById('resultLabel').textContent =
-    data.mode === 'encrypt' ? '🔒 Encrypted Output' : '🔓 Decrypted Output';
-  resultEl.textContent = '';
-
-  let i = 0;
-  const interval = setInterval(() => {
-    resultEl.textContent += data.output[i];
-    i++;
-    if (i >= data.output.length) clearInterval(interval);
-  }, 18);
-
-  // Stats
-  const letters = data.output.replace(/[^a-zA-Z]/g,'').length;
-  document.getElementById('statChars').textContent = data.output.length;
-  document.getElementById('statLetters').textContent = letters;
-  document.getElementById('statShift').textContent = data.shift;
-
-  // Alphabet grid
-  buildAlphaGrid(data.alphabet, data.shifted, data.original, data.output);
-
-  // Reset copy btn
-  const copyBtn = document.getElementById('copyBtn');
-  copyBtn.textContent = 'Copy';
-  copyBtn.classList.remove('copied');
-
-  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function buildAlphaGrid(orig, shifted, inputText, outputText) {
-  const grid = document.getElementById('alphaGrid');
-  grid.innerHTML = '';
-
-  // Find which letters are actually used
-  const usedOrig = new Set(inputText.toUpperCase().split('').filter(c => /[A-Z]/.test(c)));
-  const usedShifted = new Set(outputText.toUpperCase().split('').filter(c => /[A-Z]/.test(c)));
-
-  orig.forEach((o, i) => {
-    const pair = document.createElement('div');
-    pair.className = 'alpha-pair';
-    if (usedOrig.has(o) || usedShifted.has(shifted[i])) {
-      pair.classList.add('highlight');
-    }
-    pair.innerHTML = `
-      <div class="alpha-orig">${o}</div>
-      <div class="alpha-shifted">${shifted[i]}</div>
-    `;
-    grid.appendChild(pair);
+/* ════════════════════════
+   COPY
+════════════════════════ */
+function copyResult(){
+  if(!lastOut)return;
+  navigator.clipboard.writeText(lastOut).then(()=>{
+    const b=document.getElementById('copyBtn');
+    b.textContent='✓ Copied!';b.classList.add('ok');
+    setTimeout(()=>{b.textContent='Copy';b.classList.remove('ok')},2000);
   });
 }
 
-function copyResult() {
-  if (!lastResult) return;
-  navigator.clipboard.writeText(lastResult).then(() => {
-    const btn = document.getElementById('copyBtn');
-    btn.textContent = '✓ Copied!';
-    btn.classList.add('copied');
-    setTimeout(() => {
-      btn.textContent = 'Copy';
-      btn.classList.remove('copied');
-    }, 2000);
-  });
+function hideResults(){
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('statsRow').classList.remove('show');
+  document.getElementById('alphaCard').classList.remove('show');
 }
 
-// Enter key support
-document.getElementById('inputText').addEventListener('keydown', e => {
-  if (e.ctrlKey && e.key === 'Enter') processText();
+/* ════════════════════════
+   KEYBOARD
+════════════════════════ */
+document.getElementById('msgInput').addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='Enter')runCipher();
 });
 </script>
 </body>
