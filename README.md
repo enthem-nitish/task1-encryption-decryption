@@ -68,8 +68,8 @@ python --version   # Should be 3.x
 
 ```bash
 # 1. Clone or download the project
-git clone https://github.com/enthem-nitishh/caesar-cipher-tool.git
-cd caesar-cipher-tool
+git clone https://github.com/enthem-nitishh/ask1-encryption-decryption.git
+cd ask1-encryption-decryption
 
 # 2. Install the only dependency
 pip install flask
